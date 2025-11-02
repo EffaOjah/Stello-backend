@@ -1,0 +1,355 @@
+openapi: 3.0.3
+info:
+  title: Stello Fintech API
+  version: 1.0.0
+  description: |
+    **Stello** is a fintech platform that enables importers to send money to their Chinese vendors seamlessly.
+    <br><br>
+    This documentation covers all **Authentication**, **Email Verification**, and **Password Reset** endpoints.
+  contact:
+    name: Stello Support
+    email: support@stello.com
+
+servers:
+  # - url: https://api.stello.com/v1
+  #   description: Production server
+  - url: http://localhost:3030
+    description: Local development server
+
+tags:
+  - name: Authentication
+    description: User registration, login, logout, and email verification
+  - name: Password Management
+    description: Password reset and OTP verification endpoints
+
+paths:
+  /auth/user/register:
+    post:
+      tags: [Authentication]
+      summary: Register a new user
+      description: |
+        Registers a new Stello user, hashes the password, sends an email verification OTP, and creates a JWT token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - fullName
+                - email
+                - phoneNo
+                - username
+                - password
+                - confirmPassword
+              properties:
+                fullName:
+                  type: string
+                  example: Effa Ojah
+                email:
+                  type: string
+                  example: effa@example.com
+                phoneNo:
+                  type: string
+                  example: "+2348123456789"
+                username:
+                  type: string
+                  example: effa_dev
+                password:
+                  type: string
+                  format: password
+                  example: MyStrongPass123!
+                confirmPassword:
+                  type: string
+                  format: password
+                  example: MyStrongPass123!
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Validation error or duplicate record
+        '500':
+          description: Internal server error
+
+  /auth/user/login:
+    post:
+      tags: [Authentication]
+      summary: Login an existing user
+      description: |
+        Logs in a user by validating their credentials and generating a JWT token.  
+        If the user's email isn't verified, the response includes a redirect to the email verification page.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email:
+                  type: string
+                  example: effa@example.com
+                password:
+                  type: string
+                  format: password
+                  example: MyStrongPass123!
+      responses:
+        '200':
+          description: Successful login
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Invalid credentials
+        '500':
+          description: Internal server error
+
+  /auth/user/resend-email-verification:
+    post:
+      tags: [Authentication]
+      summary: Resend email verification OTP
+      description: Sends a new OTP to the user's registered email if not already verified.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  example: effa@example.com
+      responses:
+        '200':
+          description: OTP resent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid request or already verified
+        '500':
+          description: Internal server error
+
+  /auth/user/verify-email:
+    post:
+      tags: [Authentication]
+      summary: Verify user email using OTP
+      description: Validates the email verification OTP sent to the user’s email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp]
+              properties:
+                email:
+                  type: string
+                  example: effa@example.com
+                otp:
+                  type: string
+                  example: "529631"
+      responses:
+        '200':
+          description: Email verified successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid or expired OTP
+        '500':
+          description: Internal server error
+
+  /auth/user/send-password-reset-otp:
+    post:
+      tags: [Password Management]
+      summary: Send password reset OTP
+      description: Sends a one-time password (OTP) to the user's registered email for password reset.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email]
+              properties:
+                email:
+                  type: string
+                  example: effa@example.com
+      responses:
+        '200':
+          description: Password reset OTP sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid email or user not found
+        '500':
+          description: Internal server error
+
+  /auth/user/reset-password:
+    post:
+      tags: [Password Management]
+      summary: Reset user password
+      description: Resets the user's password after verifying the OTP sent to their email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, otp, password, confirmPassword]
+              properties:
+                email:
+                  type: string
+                  example: effa@example.com
+                otp:
+                  type: string
+                  example: "529631"
+                password:
+                  type: string
+                  format: password
+                  example: NewPassword123!
+                confirmPassword:
+                  type: string
+                  format: password
+                  example: NewPassword123!
+      responses:
+        '200':
+          description: Password reset successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '400':
+          description: Invalid or expired OTP
+        '500':
+          description: Internal server error
+
+  /auth/user/logout:
+    post:
+      tags: [Authentication]
+      summary: Logout user
+      description: Clears the user's JWT token cookie to log them out.
+      responses:
+        '200':
+          description: Logged out successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+        '500':
+          description: Internal server error
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    User:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1021
+        fullName:
+          type: string
+          example: Effa Ojah
+        email:
+          type: string
+          example: effa@example.com
+        phoneNo:
+          type: string
+          example: "+2348123456789"
+        username:
+          type: string
+          example: effa_dev
+        is_verified:
+          type: boolean
+          example: false
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-10-25T10:15:00Z"
+
+    EmailVerificationOTP:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1021
+        otp:
+          type: string
+          example: "529631"
+        expires_at:
+          type: string
+          format: date-time
+          example: "2025-10-25T10:45:00Z"
+        is_used:
+          type: boolean
+          example: false
+
+    PasswordResetOTP:
+      type: object
+      properties:
+        user_id:
+          type: integer
+          example: 1021
+        otp:
+          type: string
+          example: "123456"
+        expires_at:
+          type: string
+          format: date-time
+          example: "2025-10-25T11:00:00Z"
+        is_used:
+          type: boolean
+          example: false
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: Operation completed successfully
+        redirect:
+          type: string
+          example: /verify-email
+
+    LoginResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: true
+        message:
+          type: string
+          example: User logged in successfully
+        token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: Internal server error
